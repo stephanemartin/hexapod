@@ -1,4 +1,5 @@
 
+#include "move.h"
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 //#include <Tone.h>
@@ -109,16 +110,6 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 #define RIPPLE_CYCLE_TIME 1800
 #define FIGHT_CYCLE_TIME 660
 
-#define MODE_WALK 'W'
-#define MODE_DANCE 'D'
-#define MODE_FIGHT 'F'
-#define MODE_RECORD 'R'
-#define MODE_LEG   'L'
-
-#define SUBMODE_1 '1'
-#define SUBMODE_2 '2'
-#define SUBMODE_3 '3'
-#define SUBMODE_4 '4'
 
 #define BATTERYSAVER 5000   // milliseconds in stand mode before servos all detach to save power and heat buildup
 
@@ -917,6 +908,7 @@ void gait_ripple(int reverse, int hipforward, int hipbackward, int kneeup, int k
   }
 }
 
+
 #define G_STAND 0
 #define G_TURN  1
 #define G_TRIPOD 2
@@ -928,6 +920,7 @@ void gait_ripple(int reverse, int hipforward, int hipbackward, int kneeup, int k
 #define G_BALLET 8
 
 #define G_NUMGATES 9
+
 
 int curGait = G_STAND;
 int curReverse = 0;
@@ -1255,11 +1248,7 @@ void setServo(int servonum, int position) {
 }
 
 
-#define P_WAITING_FOR_HEADER 0
-#define P_WAITING_FOR_VERSION 1
-#define P_WAITING_FOR_LENGTH 2
-#define P_READING_DATA 3
-#define P_WAITING_FOR_CHECKSUM 4
+
 
 int pulselen = SERVOMIN;
 
@@ -1271,125 +1260,24 @@ int submode = SUBMODE_1;     // standard submode.
 int timingfactor = 1;   // default is full speed. If this is greater than 1 it multiplies the cycle time making the robot slower
 
 
-#define MAXPACKETDATA 48
-unsigned char packetData[MAXPACKETDATA];
-unsigned int packetLengthReceived;
-void processPacketData() {
-  int i = 0;
-  while (i < packetLengthReceived) {
-    switch (packetData[i]) {
-      case 'W': 
-      case 'F':
-      case 'D':
-        // new gamepad mode
-        if (i <= packetLengthReceived - 3) {
-          mode = packetData[i];
-          submode = packetData[i+1];
-          lastCmd = packetData[i+2];
-          i += 3; // length of mode command is 3 bytes
-          continue;
-        } else {
-          // this is an error, we got a command that was not complete
-          // so the safest thing to do is toss the entire packet and give an error
-          // beep
-          beep(BF_ERROR, BD_MED);
-          Serial.println("PKERR:M:Short");
-          return;  // stop processing because we can't trust this packet anymore
-        }
-        break;
-      case 'B':   // beep
-        if (i <= packetLengthReceived - 5) {
-            int honkfreq = word(packetData[i+1],packetData[i+2]);
-            int honkdur = word(packetData[i+3],packetData[i+4]);
-            // eventually we should queue beeps so scratch can issue multiple tones
-            // to be played over time.
-            if (honkfreq > 0 && honkdur > 0) {
-              Serial.println("Beep Command");
-              beep(honkfreq, honkdur);    
-            }  
-            i += 5; // length of beep command is 5 bytes
-        } else {
-          // again, we're short on bytes for this command so something is amiss
-          beep(BF_ERROR, BD_MED);
-          Serial.print("PKERR:B:Short:");Serial.print(i);Serial.print(":");Serial.println(packetLengthReceived);
-          return;  // toss the rest of the packet
-        }
-        break;
-      case 'L': // leg motion command (coming from Scratch most likely)
-        if (i <= packetLengthReceived - 5) {
-           unsigned int knee = packetData[i+2];
-           unsigned int hip = packetData[i+3];
-           if (knee == 255) {
-              knee = NOMOVE;
-              Serial.println("KNEE NOMOVE");
-           }
-           if (hip == 255) {
-            hip = NOMOVE;
-            Serial.println("HIP NOMOVE");
-           }
-           unsigned int legmask = packetData[i+1];
-           int raw = packetData[i+4];
-           Serial.print("SETLEG:"); Serial.print(legmask,DEC); Serial.print("/");Serial.print(knee);
-           Serial.print("/"); Serial.print(hip); Serial.print("/"); Serial.println(raw,DEC);
-           setLeg(legmask, knee, hip, 0, raw);
-           mode = MODE_LEG;   // this stops auto-repeat of gamepad mode commands
-           i += 5;  // length of leg command
-           startedStanding = -1; // don't sleep the legs when a specific LEG command was received
-           if (ServosDetached) { // wake up any sleeping servos
-            attach_all_servos();
-           }
-        } else {
-          // again, we're short on bytes for this command so something is amiss
-          beep(BF_ERROR, BD_MED);
-          Serial.println("PKERR:L:Short");
-          return;  // toss the rest of the packet
-        }
-      /*case 'S':   // sensor request
-        // CMUCam seems to require it's own power supply so for now we're not doing that, will get it
-        // figured out by the time KS shipping starts.
-        i++;  // right now this is a single byte command, later we will take options for which sensors to send
-        sendSensorData();
-        //////////////// TEMPORARY CODE ////////////////////
-        // chirp at most once per second if sending sensor data, this is helpful for debugging
-        if (0) {
-          unsigned long t = millis()%1000;
-          if (t < 110) {
-            beep(2000,20);
-          }
-        }
-        ////////////////////////////////////////////////////
-        break;*/
-      default:
-          Serial.print("PKERR:BadSW:"); Serial.print(packetData[i]); 
-          Serial.print("i=");Serial.print(i);Serial.print("RCD="); Serial.println(packetLengthReceived);
-          beep(BF_ERROR, BD_MED);
-          return;  // something is wrong, so toss the rest of the packet
-    }
-  }
+void doAction(char mode1,char submode1,char lastCmd1){
+  mode=mode1;
+  submode=submode1;
+  lastCmd=lastCmd1;
 }
 
 
 
 
 
-void loop() {
-
-  int p = analogRead(A0);
+int servoNo = 0;
+void loopMode(int selector) {
 
   int factor = 1;
+switch (selector){
 
-#ifdef SERVOCALIBRATEMODE
-  int angle = map(p,0,1023,0,180);
-  setKnee(4, angle);
-
-  Serial.println(angle);
-
-  return;
-#endif
-
-  
-  //Serial.print("Analog0="); Serial.println(p);
-  if (p < 50) {
+   //Serial.print("Analog0="); Serial.println(p);
+  case STAND_MODE:
     static long ReportTime = 0;
     stand();
     // in Stand mode we will also dump out all sensor values once per second to aid in debugging hardware issues
@@ -1403,33 +1291,33 @@ void loop() {
           Serial.println("");
     }
 
-  } else if (p < 150) {
+ case ADJUST_MODE:
     stand_90_degrees();
     Serial.println("AdjustMode");
-  } else if (p < 300) {           // test each motor one by one mode
-    for (int i = 0; i < 12; i++) {
-      p = analogRead(A0);
-      if (p > 300 || p < 150) {
-        break;
-      }
-      setServo(i, 140);
+    break;
+    case TEST_MODE:
+    // test each motor one by one mode
+    
+      setServo(servoNo, 140);
       delay(500);
-      if (p > 300 || p < 150) {
-        break;
-      }
-      setServo(i, 40);
+    
+      setServo(servoNo, 40);
       delay(500);
-      setServo(i, 90);
+      setServo(servoNo, 90);
       delay(100);
-      Serial.print("SERVO: "); Serial.println(i);
-    }
-  } else if (p < 600) {  // demo mode
+      Serial.print("SERVO: "); Serial.println(servoNo);
+    
+  
+  servoNo=(servoNo+1)%12;
+  break;
+  case DEMO_MODE:// demo mode
   
     random_gait(timingfactor);
     Serial.println("Rand");
     return;
 
-  } else { // bluetooth mode
+ break;
+ case COMMAND_MODE:// bluetooth mode
 
     int gotnewdata = 0;//receiveDataHandler();  // handle any new incoming data first
     //Serial.print(gotnewdata); Serial.print(" ");
