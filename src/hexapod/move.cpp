@@ -1206,7 +1206,7 @@ void initMove() {
   //digitalWrite(A1, HIGH);
   //digitalWrite(A2, LOW);
 
-  Serial.begin(9600);
+ 
   /*BlueTooth.begin(38400);
 
   BlueTooth.println("");
@@ -1219,7 +1219,8 @@ void initMove() {
   pwm.setPWMFreq(60);  // Analog servos run at ~60 Hz updates
   delay(250);
   
-  stand();
+  //stand();
+  laydown();
   delay(600);
   beep(400);
 
@@ -1272,10 +1273,15 @@ void doAction(char mode1,char submode1,char lastCmd1){
 
 int servoNo = 0;
 void loopMode(int selector) {
-
+  if(ServosDetached && selector!=OFF_MODE){
+    attach_all_servos();
+  }else if(!ServosDetached && selector==OFF_MODE){
+    detach_all_servos();
+  }
   int factor = 1;
 switch (selector){
-
+  case OFF_MODE:
+  break;
    //Serial.print("Analog0="); Serial.println(p);
   case STAND_MODE:
     static long ReportTime = 0;

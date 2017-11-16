@@ -12,7 +12,9 @@ void setup(){
       pinMode(LED_BUILTIN, OUTPUT);
 
     WiFi.begin(ssid, password);
-
+    
+      initMove();
+    
     while (WiFi.status() != WL_CONNECTED) {
       digitalWrite(LED_BUILTIN, LOW);   // turn the LED on (HIGH is the voltage level)
       delay(50);                       // wait for a second
@@ -23,6 +25,7 @@ void setup(){
     digitalWrite(LED_BUILTIN, LOW);
     server.begin();
 }
+int metaMode=0;
 void loop(){
   WiFiClient client = server.available();   // listen for incoming clients
 
@@ -43,6 +46,27 @@ void loop(){
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
             client.println();
+
+            switch(metaMode){
+              case OFF_MODE:
+                client.print("Off");
+                break;
+              case STAND_MODE:
+                client.print("Stand");
+                break;
+              case ADJUST_MODE:
+                client.print("Adjust");
+                break;
+              case DEMO_MODE:
+                client.print("Demo");
+                break;
+              case COMMAND_MODE:
+                client.print("Command");
+                break;
+              case TEST_MODE:
+                client.print("Test Mode");
+                break;
+            }
 
             // the content of the HTTP response follows the header:
             client.print("Click <a href=\"/H\">here</a> to turn the LED on pin 5 on.<br>");

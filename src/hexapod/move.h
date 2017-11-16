@@ -2,6 +2,7 @@
 #ifndef MOVE_H
 #define MOVE_H
 
+#define OFF_MODE 0
 #define STAND_MODE 1
 #define ADJUST_MODE 2
 #define DEMO_MODE 3
@@ -24,6 +25,9 @@
 #define LEFT 'l'
 #define RIGHT 'r'
 
+void initMove();
 void loopMode(int selector);
 void doAction(char mode1,char submode1,char lastCmd1);
+void detach_all_servos();
+void attach_all_servos();
 #endif
