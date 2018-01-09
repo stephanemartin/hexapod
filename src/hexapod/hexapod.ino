@@ -1,100 +1,69 @@
 
-#include <WiFi.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
 #include "move.h"
 
-const char* ssid     = "yourssid";
-const char* password = "yourpasswd";
 
-WiFiServer server(80);
+#define SERVICE_UUID        "d126db57-3b24-4077-bf38-759927bacc54"
+#define CHARACTERISTIC_UUID "03cd0bcf-5c00-49eb-9d2a-d7ed2791d762"
+
+
+const char* modeName[] = {"Off","Stand","Adjust","Demo","Command","Test Mode"};
+
+int metaMod=0;
+
+class MyCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+      std::string value = pCharacteristic->getValue();
+
+      if (value.length() > 0) {
+        
+        Serial.print("New value: ");
+        for (int i = 0; i < value.length(); i++)
+          Serial.print(value[i]);
+        Serial.println();
+
+        if(value[0] == 'M'){
+          metaMod=value[1]-'0';
+        }else if(value.length()==3){
+          metaMod=4;
+          doAction(value[0],value[1],value[2]);
+        }else{
+          Serial.println("Oops");
+          metaMod=0;
+        }
+      }
+    }
+};
 
 
 void setup(){
       pinMode(LED_BUILTIN, OUTPUT);
 
-    WiFi.begin(ssid, password);
-    
+  Serial.begin(115200);
+  Serial.println("Starting BLE work!");
+
+  BLEDevice::init("MyHexapod");
+  BLEServer *pServer = BLEDevice::createServer();
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+                                         CHARACTERISTIC_UUID,
+                                         BLECharacteristic::PROPERTY_READ |
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+
+  pCharacteristic->setValue("MS");
+  pCharacteristic->setCallbacks(new MyCallbacks());
+
+  pService->start();
+  BLEAdvertising *pAdvertising = pServer->getAdvertising();
+  pAdvertising->start();    
       initMove();
-    
-    while (WiFi.status() != WL_CONNECTED) {
-      digitalWrite(LED_BUILTIN, LOW);   // turn the LED on (HIGH is the voltage level)
-      delay(50);                       // wait for a second
-      digitalWrite(LED_BUILTIN, HIGH);    //
-      delay(500);
-      Serial.print(".");
-    }
-    digitalWrite(LED_BUILTIN, LOW);
-    server.begin();
+//      digitalWrite(LED_BUILTIN, LOW);   // turn the LED on (HIGH is the voltage level)
+  //    digitalWrite(LED_BUILTIN, HIGH);    //
 }
-int metaMode=0;
 void loop(){
-  WiFiClient client = server.available();   // listen for incoming clients
-
-  if (client) {                             // if you get a client,
-    Serial.println("New Client.");           // print a message out the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
-        if (c == '\n') {                    // if the byte is a newline character
-
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println();
-
-            switch(metaMode){
-              case OFF_MODE:
-                client.print("Off");
-                break;
-              case STAND_MODE:
-                client.print("Stand");
-                break;
-              case ADJUST_MODE:
-                client.print("Adjust");
-                break;
-              case DEMO_MODE:
-                client.print("Demo");
-                break;
-              case COMMAND_MODE:
-                client.print("Command");
-                break;
-              case TEST_MODE:
-                client.print("Test Mode");
-                break;
-            }
-
-            // the content of the HTTP response follows the header:
-            client.print("Click <a href=\"/H\">here</a> to turn the LED on pin 5 on.<br>");
-            client.print("Click <a href=\"/L\">here</a> to turn the LED on pin 5 off.<br>");
-
-            // The HTTP response ends with another blank line:
-            client.println();
-            // break out of the while loop:
-            break;
-          } else {    // if you got a newline, then clear currentLine:
-            currentLine = "";
-          }
-        } else if (c != '\r') {  // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
-        }
-
-        // Check to see if the client request was "GET /H" or "GET /L":
-        if (currentLine.endsWith("GET /H")) {
-          digitalWrite(5, HIGH);               // GET /H turns the LED on
-        }
-        if (currentLine.endsWith("GET /L")) {
-          digitalWrite(5, LOW);                // GET /L turns the LED off
-        }
-      }
-    }
-    // close the connection:
-    client.stop();
-    Serial.println("Client Disconnected.");
-  }
+  loopMode(metaMod);
 }
 

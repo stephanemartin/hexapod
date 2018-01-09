@@ -1284,10 +1284,9 @@ switch (selector){
   break;
    //Serial.print("Analog0="); Serial.println(p);
   case STAND_MODE:
-    static long ReportTime = 0;
     stand();
     // in Stand mode we will also dump out all sensor values once per second to aid in debugging hardware issues
-    if (millis() > ReportTime) {
+    /*if (millis() > ReportTime) {
           ReportTime = millis() + 1000;
           Serial.println("Stand, Sensors:");
           Serial.print(" A3="); Serial.print(analogRead(A3));
@@ -1295,12 +1294,13 @@ switch (selector){
           Serial.print(" A7="); Serial.print(analogRead(A7));
           //Serial.print(" Dist="); Serial.print(readUltrasonic());
           Serial.println("");
-    }
-
- case ADJUST_MODE:
+    }*/
+        break;
+  case ADJUST_MODE:
     stand_90_degrees();
     Serial.println("AdjustMode");
     break;
+    
     case TEST_MODE:
     // test each motor one by one mode
     
@@ -1325,13 +1325,13 @@ switch (selector){
  break;
  case COMMAND_MODE:// bluetooth mode
 
-    int gotnewdata = 0;//receiveDataHandler();  // handle any new incoming data first
+    //int gotnewdata = 0;//receiveDataHandler();  // handle any new incoming data first
     //Serial.print(gotnewdata); Serial.print(" ");
 
       // if its been more than 1 second since we got a valid bluetooth command
       // then for safety just stand still.
 
-      if (millis() > LastValidReceiveTime + 1000) {
+      /*if (millis() > LastValidReceiveTime + 1000) {
         if (millis() > LastValidReceiveTime + 50000) {
           // this is just test code for now to study the loss of connection problem
           // after 5 full seconds of not receiving a valid command, reset the bluetooth connection
@@ -1356,7 +1356,7 @@ switch (selector){
       if (lastCmd == -1) {
         //Serial.print("-");
         return;
-      }
+      }*/
 
 
       // fight submodes C and E should not be repeated without receiving
@@ -1367,9 +1367,9 @@ switch (selector){
         return;
       }
 
-    } else {
+/*    } else {
       LastReceiveTime = millis();
-    }
+    }*/
     // Leg set mode should also not be repeated
     if (mode == MODE_LEG) {
       //Serial.print("l");
