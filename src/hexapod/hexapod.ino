@@ -53,7 +53,7 @@ void setup(){
                                          BLECharacteristic::PROPERTY_WRITE
                                        );
 
-  pCharacteristic->setValue("MS");
+  pCharacteristic->setValue("M0");
   pCharacteristic->setCallbacks(new MyCallbacks());
 
   pService->start();

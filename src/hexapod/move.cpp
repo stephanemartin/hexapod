@@ -1281,6 +1281,7 @@ void loopMode(int selector) {
   int factor = 1;
 switch (selector){
   case OFF_MODE:
+  case STOP_MODE:
   break;
    //Serial.print("Analog0="); Serial.println(p);
   case STAND_MODE:
@@ -1362,10 +1363,10 @@ switch (selector){
       // fight submodes C and E should not be repeated without receiving
       // a packet because otherwise they'll zoom right to the end state instead
       // of giving the user a chance to make fine adjustments to position
-      if (mode == MODE_FIGHT && (submode == SUBMODE_3 || submode == SUBMODE_4)) {
+      /*if (mode == MODE_FIGHT && (submode == SUBMODE_3 || submode == SUBMODE_4)) {
         //Serial.print("f");
         return;
-      }
+      }*/
 
 /*    } else {
       LastReceiveTime = millis();
@@ -1577,11 +1578,6 @@ switch (selector){
         } else if (mode == MODE_DANCE && submode == SUBMODE_4) {
           dance_hands(lastCmd);
         } else {
-            if (millis() - startedStanding > BATTERYSAVER) {
-              //Serial.print("DET LC=");Serial.write(lastCmd); Serial.println("");
-              detach_all_servos();
-              return;
-            }
           stand();
         }
 

@@ -8,6 +8,7 @@
 #define DEMO_MODE 3
 #define COMMAND_MODE 4
 #define TEST_MODE 5
+#define STOP_MODE 6
 
 #define MODE_WALK 'W'
 #define MODE_DANCE 'D'
